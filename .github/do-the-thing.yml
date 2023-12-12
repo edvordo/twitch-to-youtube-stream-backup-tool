@@ -1,0 +1,37 @@
+name: DTT
+
+on: push
+
+job:
+  do-the-thing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          repository: edvordo/yt-dlp
+          path: git-yt-dlp
+
+      - name: ffmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v2
+
+      - name: python3
+        uses: actions/setup-python@v4
+        with:
+            python-version: '3.11'
+
+      - name: php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: do-the-thing
+        run: |
+          php -v
+          python3 --version
+          ffmpeg -version
+          composer install
+          php test.php

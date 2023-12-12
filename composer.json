@@ -1,0 +1,31 @@
+{
+    "name": "edvordo/twitch-to-youtube-backup-tool",
+    "description": "Backs-up streams from channel and uploads them to youtube channel",
+    "type": "project",
+    "require": {
+        "google/apiclient": "^2.15",
+        "guzzlehttp/guzzle": "^7.8",
+        "vlucas/phpdotenv": "^5.6",
+        "symfony/process": "^7.0",
+        "symfony/mailer": "^7.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Edvordo\\Twitch2YoutubeBackupTool\\": "src/"
+        }
+    },
+    "scripts": {
+        "pre-autoload-dump": "Google\\Task\\Composer::cleanup"
+    },
+    "extra": {
+        "google/apiclient-services": [
+            "YouTube"
+        ]
+    },
+    "authors": [
+        {
+            "name": "edvordo"
+        }
+    ]
+}
