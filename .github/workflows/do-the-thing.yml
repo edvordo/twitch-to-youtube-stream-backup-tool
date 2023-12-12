@@ -2,7 +2,7 @@ name: DTT
 
 on: push
 
-job:
+jobs:
   do-the-thing:
     runs-on: ubuntu-latest
     steps:
