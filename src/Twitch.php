@@ -86,7 +86,7 @@ class Twitch
 
         $this->streamIdToDownload = null;
         $lastStreamId             = (int) $_SERVER['LAST_VIDEO_ID'];
-        $allIdsAreHigherOrEqual = false;
+        $allIdsAreHigherOrEqual   = false;
 
         foreach ($streamIds as $streamId) {
             if ($streamId > $lastStreamId) {
@@ -103,6 +103,9 @@ class Twitch
         return $this;
     }
 
+    /**
+     * @throws \Exception
+     */
     public function ytDlp()
     {
         if (true === $this->isLive()) {
@@ -110,20 +113,38 @@ class Twitch
 
             return $this;
         }
+
         if (true === is_null($this->getStreamIdToDownload())) {
             echo 'SKIPPING download - nothing to download' . PHP_EOL;
 
             return $this;
         }
-        $process = new Process(['./git-yt-dlp/yt-dlp.sh', '-vU', '--write-subs', '--sub-langs', 'live_chat', $this->getStreamToDownloadUrl()]);
+
+        $process = new Process(['./git-yt-dlp/yt-dlp.sh', '-v', '--write-subs', '--sub-langs', 'live_chat', $this->getStreamToDownloadUrl()]);
         $process->setTimeout(0)->start();
 
         foreach ($process as $type => $output) {
-            if ($process::OUT === $type) {
-                echo chr(27) . '[0G' . $output;
-            } else {
+            if ($process::ERR === $type) {
+                if (false === str_contains($output, 'Unable to download JSON metadata: HTTP Error 403')) {
+                    echo 'SKIPPING download - access to chat history is restricted' . PHP_EOL;
+
+                    break;
+                }
+                if (false === str_starts_with($output, '[debug]')) {
+                    throw new Exception($output);
+                }
                 echo $output;
+            } else {
+                echo chr(27) . '[0G' . $output;
             }
+        }
+
+        // handle potentially still running process
+        while (true) {
+            if (false === $process->isRunning()) {
+                break;
+            }
+            sleep(1);
         }
 
         if (false === $process->isSuccessful()) {
@@ -150,11 +171,13 @@ class Twitch
 
             return $this;
         }
+
         if (true === is_null($this->getStreamIdToDownload())) {
             echo 'SKIPPING download - nothing to download' . PHP_EOL;
 
             return $this;
         }
+
         echo 'Mailing chat history ..' . PHP_EOL;
         $transport = Transport::fromDsn(
             sprintf(
@@ -169,7 +192,7 @@ class Twitch
 
         $mailer = new Mailer($transport);
 
-        $file  = `ls *.json | grep {$this->getStreamIdToDownload()}`;
+        $file = `ls *.json | grep {$this->getStreamIdToDownload()}`;
 
         if (true === empty($file)) {
             return $this;

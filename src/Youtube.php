@@ -18,7 +18,8 @@ class Youtube
 
     private ?YoutubeService $service = null;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->setUpClient();
     }
 
@@ -82,11 +83,18 @@ class Youtube
     public function processVideosFrom(string $directory)
     {
         ini_set('memory_limit', -1);
-        $videos = preg_split('/\n/', `ls -Ahrt "{$directory}" | grep -E "\[v[0-9]+\\]\.mp4"`, -1, PREG_SPLIT_NO_EMPTY);
+        $files = `ls -Ahrt "{$directory}" | grep -E "\[v[0-9]+\\]\.mp4"`;
+
+        if (true === empty($files)) {
+            echo 'SKIPPING upload - no files to upload detected' . PHP_EOL;
+
+            return $this;
+        }
+
+        $videos = preg_split('/\n/', $files, -1, PREG_SPLIT_NO_EMPTY);
 
         foreach ($videos as $videoToUpload) {
             $this->getClient()->setDefer(true);
-//            $videoToUpload = $videos[$videoIndex];
             preg_match('/(\[v[0-9]+])/', $videoToUpload, $matches);
 
             $video = new Video();
@@ -159,5 +167,7 @@ class Youtube
         }
 
         $this->getClient()->setDefer(false);
+
+        return $this;
     }
 }
