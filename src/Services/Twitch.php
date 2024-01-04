@@ -1,9 +1,10 @@
 <?php
 
-namespace Edvordo\Twitch2YoutubeBackupTool;
+namespace Edvordo\Twitch2YoutubeBackupTool\Services;
 
 use Exception;
 use GuzzleHttp\Client;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mime\Email;
@@ -14,6 +15,18 @@ class Twitch
     private ?int $streamIdToDownload = null;
 
     private bool $isLive = false;
+
+    private LoggerInterface $logger;
+
+    public function __construct(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
+    private function getLogger(): LoggerInterface
+    {
+        return $this->logger;
+    }
 
     public function isLive(): bool
     {
@@ -109,34 +122,41 @@ class Twitch
     public function ytDlp()
     {
         if (true === $this->isLive()) {
-            echo 'SKIPPING download - currently live' . PHP_EOL;
+            $this->getLogger()->debug('SKIPPING download - currently live');
 
             return $this;
         }
 
         if (true === is_null($this->getStreamIdToDownload())) {
-            echo 'SKIPPING download - nothing to download' . PHP_EOL;
+            $this->getLogger()->debug('SKIPPING download - nothing to download');
 
             return $this;
         }
+
+        $this->getLogger()->info('Starting download of ' . $this->getStreamToDownloadUrl());
 
         $process = new Process(['./git-yt-dlp/yt-dlp.sh', '-v', '--write-subs', '--sub-langs', 'live_chat', $this->getStreamToDownloadUrl()]);
         $process->setTimeout(0)->start();
 
         foreach ($process as $type => $output) {
             if ($process::ERR === $type) {
-                if (false === str_contains($output, 'Unable to download JSON metadata: HTTP Error 403')) {
-                    echo 'SKIPPING download - access to chat history is restricted' . PHP_EOL;
+                if (true === str_contains($output, 'Unable to download JSON metadata: HTTP Error 403')) {
+                    $this->getLogger()->warning('SKIPPING download - access to chat history is restricted');
 
                     break;
                 }
+
                 if (false === str_starts_with($output, '[debug]')) {
+                    $this->getLogger()->error($output);
+
                     throw new Exception($output);
                 }
-                echo $output;
+
+                $this->getLogger()->debug($output);
             } else {
-                echo chr(27) . '[0G' . $output;
+                echo $output;
             }
+
         }
 
         // handle potentially still running process
@@ -150,6 +170,7 @@ class Twitch
         if (false === $process->isSuccessful()) {
             throw new \RuntimeException('Failed downloading stream via yt-dlp');
         }
+        $this->getLogger()->info('Done ..');
 
         return $this;
     }
@@ -167,18 +188,18 @@ class Twitch
     public function mailChatHistory(): Twitch
     {
         if (true === $this->isLive()) {
-            echo 'SKIPPING download - currently live' . PHP_EOL;
+            $this->getLogger()->debug('SKIPPING download - currently live');
 
             return $this;
         }
 
         if (true === is_null($this->getStreamIdToDownload())) {
-            echo 'SKIPPING download - nothing to download' . PHP_EOL;
+            $this->getLogger()->debug('SKIPPING download - nothing to download');
 
             return $this;
         }
 
-        echo 'Mailing chat history ..' . PHP_EOL;
+        $this->getLogger()->info('Mailing chat history ..');
         $transport = Transport::fromDsn(
             sprintf(
                 '%s://%s:%s@%s:%d',
@@ -208,11 +229,11 @@ class Twitch
 
         try {
             $mailer->send($email);
-            echo 'done ..' . PHP_EOL;
+            $this->getLogger()->info('done ..');
             unlink('./' . $file);
         } catch (Exception $_) {
-            echo 'Failed to send chat history ..' . PHP_EOL . $_->getMessage() . PHP_EOL;
-            // well, idk ..
+            // well, idk .. but log it ..
+            $this->getLogger()->error('Failed to send chat history ..' . PHP_EOL . $_->getMessage());
         }
 
         return $this;

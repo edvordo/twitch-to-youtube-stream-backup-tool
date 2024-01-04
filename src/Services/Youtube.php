@@ -1,6 +1,6 @@
 <?php
 
-namespace Edvordo\Twitch2YoutubeBackupTool;
+namespace Edvordo\Twitch2YoutubeBackupTool\Services;
 
 use Google\Client;
 use Google\Http\MediaFileUpload;
@@ -11,6 +11,7 @@ use Google\Service\YouTube\ResourceId;
 use Google\Service\YouTube\Video;
 use Google\Service\YouTube\VideoSnippet;
 use Google\Service\YouTube\VideoStatus;
+use Psr\Log\LoggerInterface;
 
 class Youtube
 {
@@ -18,12 +19,24 @@ class Youtube
 
     private ?YoutubeService $service = null;
 
-    public function __construct()
+    private LoggerInterface $logger;
+
+    public function __construct(LoggerInterface $logger)
     {
+        $this->logger = $logger;
+
         $this->setUpClient();
     }
 
-    private function setUpClient(): static
+    private function getLogger(): LoggerInterface
+    {
+        return $this->logger;
+    }
+
+    /**
+     * @throws \Google\Exception
+     */
+    private function setUpClient(): void
     {
         $ytClient = new Client();
         $ytClient->setAuthConfig(json_decode($_SERVER['GOOGLE_APPLICATION_CREDENTIALS'], true));
@@ -33,8 +46,6 @@ class Youtube
         $ytClient->setRedirectUri('http://localhost');
 
         $this->client = $ytClient;
-
-        return $this;
     }
 
     public function getClient(): ?Client
@@ -82,11 +93,11 @@ class Youtube
 
     public function processVideosFrom(string $directory)
     {
-        ini_set('memory_limit', -1);
+        ini_set('memory_limit', '256M');
         $files = `ls -Ahrt "{$directory}" | grep -E "\[v[0-9]+\\]\.mp4"`;
 
         if (true === empty($files)) {
-            echo 'SKIPPING upload - no files to upload detected' . PHP_EOL;
+            $this->getLogger()->debug('SKIPPING upload - no files to upload detected');
 
             return $this;
         }
@@ -112,7 +123,7 @@ class Youtube
 
             $video->setSnippet($videoSnippet);
 
-            echo 'Uploading ' . $videoToUpload . ' ...' . PHP_EOL;
+            $this->getLogger()->info('Uploading ' . $videoToUpload . ' ...');
 
             /** @var \Psr\Http\Message\RequestInterface $insertRequest */
             $insertRequest = $this->getService()->videos->insert('status,snippet', $video);
@@ -139,14 +150,14 @@ class Youtube
             while (!$status && !feof($handle)) {
                 $chunk  = fread($handle, $chunkSizeBytes);
                 $status = $media->nextChunk($chunk);
-                echo chr(27) . '[0GProcessed ' . number_format($media->getProgress() / $fileSize * 100, 2, ',', ' ') . '% ...';
+                $this->getLogger()->debug('Processed ' . number_format($media->getProgress() / $fileSize * 100, 2, ',', ' ') . '% ...');
             }
 
             fclose($handle);
 
             $this->getClient()->setDefer(false);
 
-            echo PHP_EOL . 'Adding to playlist ..' . PHP_EOL;
+            $this->getLogger()->info(PHP_EOL . 'Adding to playlist ..');
 
             $playlistItemSnippetResource = new ResourceId();
             $playlistItemSnippetResource->setKind('youtube#video');
@@ -161,9 +172,11 @@ class Youtube
 
             $this->getService()->playlistItems->insert('snippet', $playlistItem);
 
-            echo 'Removing file .. ' . PHP_EOL;
+            $this->getLogger()->info('Removing file .. ');
+
             unlink($pathToFile);
-            echo PHP_EOL . sprintf('Done - https://studio.youtube.com/video/%s/edit', $status['id']) . PHP_EOL . PHP_EOL;
+
+            $this->getLogger()->info(PHP_EOL . sprintf('Done - https://studio.youtube.com/video/%s/edit', $status['id']));
         }
 
         $this->getClient()->setDefer(false);
