@@ -148,6 +148,10 @@ class T2YSBT
 
     public function processYoutube()
     {
+        if (true === is_null($this->twitch->getStream())) {
+            return $this;
+        }
+
         $this->youtube->processVideosFrom($this->getBaseDir(), $this->twitch->getStream());
 
         return $this;
