@@ -121,7 +121,8 @@ class T2YSBT
             return $this;
         }
 
-        $this->getLastVideoId()
+        $this
+            ->getLastVideoId()
             ->processTwitch()
             ->processYoutube()
         ;

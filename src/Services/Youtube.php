@@ -147,7 +147,7 @@ class Youtube
         foreach ($videos as $videoToUpload) {
             $this->getClient()->setDefer(true);
             preg_match('/(\[v[0-9]+])/', $videoToUpload, $videoTitleMatches);
-            preg_match('/\[v([0-9]+)]$/', $videoToUpload, $videoIdMatches);
+            preg_match('/\[v([0-9]+)]/', $videoToUpload, $videoIdMatches);
 
             $video = new Video();
 
@@ -164,9 +164,10 @@ class Youtube
             $description = preg_replace('/\[EDO]/', '', $description);
             $description = preg_replace('/\[DROPS]/', '', $description);
             $description = trim($description);
-            if ((int) $videoIdMatches[0] === $streamInfo['id']) {
-                $description .= PHP_EOL . 'Streamed at: ' . (new \DateTimeImmutable($this->streamToDownload['created_at']))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s T');
+            if ((int) $videoIdMatches[1] === $streamInfo['id']) {
+                $description .= PHP_EOL . 'Streamed at: ' . (new \DateTimeImmutable($streamInfo['created_at']))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s T');
             }
+
             $videoSnippet->setDescription($description);
 
             $video->setSnippet($videoSnippet);
