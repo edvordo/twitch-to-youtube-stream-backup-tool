@@ -2,6 +2,7 @@
 
 namespace Edvordo\Twitch2YoutubeBackupTool\Services;
 
+use Edvordo\Twitch2YoutubeBackupTool\T2YSBT;
 use Exception;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
@@ -12,7 +13,7 @@ use Symfony\Component\Process\Process;
 
 class Twitch
 {
-    private ?int $streamIdToDownload = null;
+    private ?array $streamToDownload = null;
 
     private bool $isLive = false;
 
@@ -40,7 +41,7 @@ class Twitch
         return $this;
     }
 
-    public function extract()
+    public function extract(): Twitch
     {
         $httpClient = new Client();
         $clientId   = $_SERVER['TWITCH_CLIENT_ID'];
@@ -94,23 +95,24 @@ class Twitch
 
         $streams = $json['data'];
 
-        $streamIds = array_map(fn($stream) => (int) $stream['id'], $streams);
-        $streamIds = array_reverse($streamIds);
+        $streams = array_map(fn ($info) => [...$info, 'id' => (int) $info['id']], $streams);
+        $streams = array_reverse($streams);
 
-        $this->streamIdToDownload = null;
-        $lastStreamId             = (int) $_SERVER['LAST_VIDEO_ID'];
+        $this->streamToDownload = null;
+        $lastStreamId             = (int) file_get_contents('./last_video_id');
+
         $allIdsAreHigherOrEqual   = false;
 
-        foreach ($streamIds as $streamId) {
-            if ($streamId > $lastStreamId) {
-                $this->streamIdToDownload = $streamId;
+        foreach ($streams as $stream) {
+            if ($stream['id'] > $lastStreamId) {
+                $this->streamToDownload = $stream;
                 break;
             }
-            $allIdsAreHigherOrEqual = $allIdsAreHigherOrEqual || $lastStreamId <= $streamId;
+            $allIdsAreHigherOrEqual = $allIdsAreHigherOrEqual || $lastStreamId <= $stream['id'];
         }
 
-        if (false === $allIdsAreHigherOrEqual && true === is_null($this->streamIdToDownload)) {
-            $this->streamIdToDownload = $streamIds[0];
+        if (false === $allIdsAreHigherOrEqual && true === is_null($this->streamToDownload)) {
+            $this->streamToDownload = $streams[0];
         }
 
         return $this;
@@ -119,7 +121,7 @@ class Twitch
     /**
      * @throws \Exception
      */
-    public function ytDlp()
+    public function ytDlp(): Twitch
     {
         if (true === $this->isLive()) {
             $this->getLogger()->debug('SKIPPING download - currently live');
@@ -133,6 +135,9 @@ class Twitch
             return $this;
         }
 
+        touch(T2YSBT::VIDEO_IN_PROGRESS);
+        file_put_contents(T2YSBT::VIDEO_IN_PROGRESS, $this->getStreamIdToDownload());
+
         $this->getLogger()->info('Starting download of ' . $this->getStreamToDownloadUrl());
 
         $process = new Process(['./git-yt-dlp/yt-dlp.sh', '-v', '--write-subs', '--sub-langs', 'live_chat', $this->getStreamToDownloadUrl()]);
@@ -142,6 +147,7 @@ class Twitch
             if ($process::ERR === $type) {
                 if (true === str_contains($output, 'Unable to download JSON metadata: HTTP Error 403')) {
                     $this->getLogger()->warning('SKIPPING download - access to chat history is restricted');
+                    $process->stop(0, SIGKILL);
 
                     break;
                 }
@@ -177,7 +183,7 @@ class Twitch
 
     public function getStreamIdToDownload(): ?int
     {
-        return $this->streamIdToDownload;
+        return $this->streamToDownload['id'];
     }
 
     public function getStreamToDownloadUrl()
@@ -237,5 +243,10 @@ class Twitch
         }
 
         return $this;
+    }
+
+    public function getStream()
+    {
+        return $this->streamToDownload;
     }
 }

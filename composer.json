@@ -3,6 +3,7 @@
     "description": "Backs-up streams from channel and uploads them to youtube channel",
     "type": "project",
     "require": {
+        "ext-pcntl": "*",
         "google/apiclient": "^2.15",
         "guzzlehttp/guzzle": "^7.8",
         "vlucas/phpdotenv": "^5.6",

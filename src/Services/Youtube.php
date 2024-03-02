@@ -2,6 +2,7 @@
 
 namespace Edvordo\Twitch2YoutubeBackupTool\Services;
 
+use Edvordo\Twitch2YoutubeBackupTool\T2YSBT;
 use Google\Client;
 use Google\Http\MediaFileUpload;
 use Google\Service\YouTube as YoutubeService;
@@ -91,7 +92,46 @@ class Youtube
         return $this->service;
     }
 
-    public function processVideosFrom(string $directory)
+    public function getLastVideoInPlaylist()
+    {
+        $pullMore = true;
+        $pageToken = false;
+        while (true === $pullMore) {
+            $params = [
+                'maxResults' => 50,
+                'playlistId' => $_SERVER['YOUTUBE_PLAYLIST_ID']
+            ];
+            if (false !== $pageToken) {
+                $params['pageToken'] = $pageToken;
+            }
+            $response  = $this->getService()
+                ->playlistItems
+                ->listPlaylistItems(
+                    'snippet',
+                    $params
+                );
+
+            $pageToken = $response->getNextPageToken();
+
+            $pullMore = false === is_null($pageToken);
+        }
+
+        $items = $response->getItems();
+        /** @var PlaylistItem $lastItem */
+        $lastItem = array_pop($items);
+
+        $title = $lastItem->getSnippet()->getTitle();
+
+        $videoId = preg_replace('/[^0-9]+/', '', $title);
+
+        touch(T2YSBT::LAST_VIDEO_ID);
+        file_put_contents(T2YSBT::LAST_VIDEO_ID, $videoId);
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function processVideosFrom(string $directory, array $streamInfo)
     {
         ini_set('memory_limit', '256M');
         $files = `ls -Ahrt "{$directory}" | grep -E "\[v[0-9]+\\]\.mp4"`;
@@ -106,7 +146,8 @@ class Youtube
 
         foreach ($videos as $videoToUpload) {
             $this->getClient()->setDefer(true);
-            preg_match('/(\[v[0-9]+])/', $videoToUpload, $matches);
+            preg_match('/(\[v[0-9]+])/', $videoToUpload, $videoTitleMatches);
+            preg_match('/\[v([0-9]+)]$/', $videoToUpload, $videoIdMatches);
 
             $video = new Video();
 
@@ -118,8 +159,15 @@ class Youtube
             $videoSnippet = new VideoSnippet();
             $videoSnippet->setCategoryId((string) $_SERVER['YOUTUBE_CATEGORY_ID']);
 
-            $videoSnippet->setTitle($matches[0]);
-            $videoSnippet->setDescription(trim(preg_replace('/(\[v[0-9]+]).+$/', '', $videoToUpload)));
+            $videoSnippet->setTitle($videoTitleMatches[0]);
+            $description = preg_replace('/(\[v[0-9]+]).+$/', '', $videoToUpload);
+            $description = preg_replace('/\[EDO]/', '', $description);
+            $description = preg_replace('/\[DROPS]/', '', $description);
+            $description = trim($description);
+            if ((int) $videoIdMatches[0] === $streamInfo['id']) {
+                $description .= PHP_EOL . 'Streamed at: ' . (new \DateTimeImmutable($this->streamToDownload['created_at']))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s T');
+            }
+            $videoSnippet->setDescription($description);
 
             $video->setSnippet($videoSnippet);
 
@@ -180,6 +228,8 @@ class Youtube
         }
 
         $this->getClient()->setDefer(false);
+
+        unlink(T2YSBT::VIDEO_IN_PROGRESS);
 
         return $this;
     }

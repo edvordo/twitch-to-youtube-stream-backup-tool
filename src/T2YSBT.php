@@ -17,14 +17,22 @@ use Psr\Log\LoggerInterface;
 
 class T2YSBT
 {
+    const string LAST_VIDEO_ID = './last_video_id';
+    const string VIDEO_IN_PROGRESS = './video_in_progress';
+
     private LoggerInterface $logger;
 
     private string $baseDir;
+
+    private Twitch $twitch;
+
+    private Youtube $youtube;
 
     public function __construct(string $baseDir)
     {
         $this->baseDir = $baseDir;
         $this->setupLogger();
+        $this->setupServices();
     }
 
     public function getLogger(): LoggerInterface
@@ -99,30 +107,53 @@ class T2YSBT
         $this->setLogger($logger);
     }
 
+    private function setupServices()
+    {
+        $this->twitch = (new Twitch($this->getLogger()));
+        $this->youtube = (new Youtube($this->getLogger()))
+            ->setupAccessToken()
+            ->setUpService();
+    }
+
     public function process()
     {
-        $this->processTwitch()
+        if (true === $this->videoInProgress()) {
+            return $this;
+        }
+
+        $this->getLastVideoId()
+            ->processTwitch()
             ->processYoutube()
         ;
     }
 
+    public function getLastVideoId()
+    {
+        $this->youtube->getLastVideoInPlaylist();
+
+        return $this;
+    }
+
     public function processTwitch()
     {
-        (new Twitch($this->getLogger()))
+        $this->twitch
             ->extract()
             ->ytDlp()
-            ->mailChatHistory();
+            ->mailChatHistory()
+        ;
 
         return $this;
     }
 
     public function processYoutube()
     {
-        (new Youtube($this->getLogger()))
-            ->setupAccessToken()
-            ->setUpService()
-            ->processVideosFrom($this->getBaseDir());
+        $this->youtube->processVideosFrom($this->getBaseDir(), $this->twitch->getStream());
 
         return $this;
+    }
+
+    private function videoInProgress()
+    {
+        return true === file_exists(self::VIDEO_IN_PROGRESS);
     }
 }
