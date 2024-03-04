@@ -60,21 +60,21 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
         run: |
           podman build \
-            --env=TWITCH_CHANNEL_NAME \
-            --env=TWITCH_CLIENT_ID \
-            --env=TWITCH_SECRET \
-            --env=GOOGLE_APPLICATION_CREDENTIALS \
-            --env=YOUTUBE_CHANNEL_ID \
-            --env=YOUTUBE_CATEGORY_ID \
-            --env=YOUTUBE_PLAYLIST_ID \
-            --env=YOUTUBE_REFRESH_TOKEN \
-            --env=MAIL_PROTOCOL \
-            --env=MAIL_USERNAME \
-            --env=MAIL_PASSWORD \
-            --env=MAIL_HOST \
-            --env=MAIL_PORT \
-            --env=MAIL_FROM \
-            --env=MAIL_TO \
+            --build-arg "$TWITCH_CHANNEL_NAME" \
+            --build-arg "$TWITCH_CLIENT_ID" \
+            --build-arg "$TWITCH_SECRET" \
+            --build-arg "$GOOGLE_APPLICATION_CREDENTIALS" \
+            --build-arg "$YOUTUBE_CHANNEL_ID" \
+            --build-arg "$YOUTUBE_CATEGORY_ID" \
+            --build-arg "$YOUTUBE_PLAYLIST_ID" \
+            --build-arg "$YOUTUBE_REFRESH_TOKEN" \
+            --build-arg "$MAIL_PROTOCOL" \
+            --build-arg "$MAIL_USERNAME" \
+            --build-arg "$MAIL_PASSWORD" \
+            --build-arg "$MAIL_HOST" \
+            --build-arg "$MAIL_PORT" \
+            --build-arg "$MAIL_FROM" \
+            --build-arg "$MAIL_TO" \
             -f docker/Dockerfile \
             edvordo/twitch-to-youtube-stream-backup-tool \
             .
