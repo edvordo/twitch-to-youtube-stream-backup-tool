@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: php
+      - name: setup php
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -51,6 +51,7 @@ jobs:
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
         run: |
+          cat /etc/os-release
           php -v
           python3 --version
           ffmpeg -version
