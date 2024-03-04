@@ -30,6 +30,14 @@ jobs:
         with:
           php-version: '8.3'
 
+      - name: update system
+        shell: /bin/bash
+        run: sudo apt-get update -q
+
+      - name: setup podman
+        shell: /bin/bash
+        run: sudo apt-get isntall -y podman
+
       - name: do-the-thing
         env:
           TWITCH_CHANNEL_NAME: ${{ secrets.TWITCH_CHANNEL_NAME }}
@@ -57,6 +65,7 @@ jobs:
           ffmpeg -version
           composer install
           php test.php
+          podman version
 
 
 
