@@ -31,11 +31,11 @@ jobs:
           php-version: '8.3'
 
       - name: update system
-        shell: /bin/bash
+        shell: bash
         run: sudo apt-get update -q
 
       - name: setup podman
-        shell: /bin/bash
+        shell: bash
         run: sudo apt-get isntall -y podman
 
       - name: do-the-thing
