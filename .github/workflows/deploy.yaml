@@ -1,0 +1,42 @@
+name: Build and deploy to server
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup git-yt-dlp
+        uses: actions/checkout@v4
+        with:
+          repository: edvordo/yt-dlp
+          path: git-yt-dlp
+
+      - name: setup ffmpeg
+        uses: FredericoCarboni/setup-ffmpeg@v3
+
+      - name: setup python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: do-the-thing
+        run: |
+          php -v
+          python3 --version
+          ffmpeg -version
+          composer install
+          php test.php
+
+
+
