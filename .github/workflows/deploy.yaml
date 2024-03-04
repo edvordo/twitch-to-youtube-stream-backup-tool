@@ -59,13 +59,26 @@ jobs:
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
         run: |
-          cat /etc/os-release
-          php -v
-          python3 --version
-          ffmpeg -version
-          composer install
-          php test.php
-          podman version
+          podman build \
+            -e TWITCH_CHANNEL_NAME \
+            -e TWITCH_CLIENT_ID \
+            -e TWITCH_SECRET \
+            -e GOOGLE_APPLICATION_CREDENTIALS \
+            -e YOUTUBE_CHANNEL_ID \
+            -e YOUTUBE_CATEGORY_ID \
+            -e YOUTUBE_PLAYLIST_ID \
+            -e YOUTUBE_REFRESH_TOKEN \
+            -e MAIL_PROTOCOL \
+            -e MAIL_USERNAME \
+            -e MAIL_PASSWORD \
+            -e MAIL_HOST \
+            -e MAIL_PORT \
+            -e MAIL_FROM \
+            -e MAIL_TO \
+            -f docker/Dockerfile \
+            edvordo/twitch-to-youtube-stream-backup-tool \
+            .
+            
 
 
 
