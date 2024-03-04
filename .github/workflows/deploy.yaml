@@ -60,23 +60,23 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
         run: |
           podman build \
-            --build-arg "$TWITCH_CHANNEL_NAME" \
-            --build-arg "$TWITCH_CLIENT_ID" \
-            --build-arg "$TWITCH_SECRET" \
-            --build-arg "$GOOGLE_APPLICATION_CREDENTIALS" \
-            --build-arg "$YOUTUBE_CHANNEL_ID" \
-            --build-arg "$YOUTUBE_CATEGORY_ID" \
-            --build-arg "$YOUTUBE_PLAYLIST_ID" \
-            --build-arg "$YOUTUBE_REFRESH_TOKEN" \
-            --build-arg "$MAIL_PROTOCOL" \
-            --build-arg "$MAIL_USERNAME" \
-            --build-arg "$MAIL_PASSWORD" \
-            --build-arg "$MAIL_HOST" \
-            --build-arg "$MAIL_PORT" \
-            --build-arg "$MAIL_FROM" \
-            --build-arg "$MAIL_TO" \
+            --build-arg TWITCH_CHANNEL_NAME=${TWITCH_CHANNEL_NAME} \
+            --build-arg TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID} \
+            --build-arg TWITCH_SECRET=${TWITCH_SECRET} \
+            --build-arg GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+            --build-arg YOUTUBE_CHANNEL_ID=${YOUTUBE_CHANNEL_ID} \
+            --build-arg YOUTUBE_CATEGORY_ID=${YOUTUBE_CATEGORY_ID} \
+            --build-arg YOUTUBE_PLAYLIST_ID=${YOUTUBE_PLAYLIST_ID} \
+            --build-arg YOUTUBE_REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN} \
+            --build-arg MAIL_PROTOCOL=${MAIL_PROTOCOL} \
+            --build-arg MAIL_USERNAME=${MAIL_USERNAME} \
+            --build-arg MAIL_PASSWORD=${MAIL_PASSWORD} \
+            --build-arg MAIL_HOST=${MAIL_HOST} \
+            --build-arg MAIL_PORT=${MAIL_PORT} \
+            --build-arg MAIL_FROM=${MAIL_FROM} \
+            --build-arg MAIL_TO=${MAIL_TO} \
             -f docker/Dockerfile \
-            edvordo/twitch-to-youtube-stream-backup-tool \
+            -t edvordo/twitch-to-youtube-stream-backup-tool \
             .
             
 
