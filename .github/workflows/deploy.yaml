@@ -36,7 +36,7 @@ jobs:
 
       - name: setup podman
         shell: bash
-        run: sudo apt-get isntall -y podman
+        run: sudo apt-get install -y podman
 
       - name: do-the-thing
         env:
